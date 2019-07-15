@@ -1,198 +1,149 @@
 # SOAL 2 - REKOMENDASI BUKU
 
-import numpy as np
 import pandas as pd
 
-df = pd.read_csv('books.csv')
-df1 = pd.read_csv('ratings.csv')
-df = df.rename(columns={'book_id': 'book_id_df'})
-df1 = df1.rename(columns={'book_id':'book_id_df1'})
+# ============================================= DATAFRAME =================================================================================
 
-dfAll = pd.concat([df, df1], axis=1)
-dfAll = dfAll.dropna(subset = ['book_id_df', 'goodreads_book_id', 'best_book_id', 'work_id',
-       'books_count', 'isbn', 'isbn13', 'authors', 'original_publication_year',
-       'original_title', 'title', 'language_code', 'average_rating',
-       'ratings_count', 'work_ratings_count', 'work_text_reviews_count',
-       'ratings_1', 'ratings_2', 'ratings_3', 'ratings_4', 'ratings_5',
-       'image_url', 'small_image_url', 'user_id', 'book_id_df1', 'rating'])
-
-# ============================================ DATAFRAME ==========================================================================================
-
-dfBook = dfAll[['user_id', 'original_title', 'rating']]
+dfBooks = pd.read_csv('books.csv')
+dfRatings = pd.read_csv('ratings.csv')
 
 def mergeCol(a):
-    return str(a['original_title']) + ' ' + str(a['rating'])
+    return str(a['authors'])+' '+str(a['original_title'])+' '+str(a['language_code'])
+dfBooks['features'] = dfBooks.apply(mergeCol,axis=1)
 
-dfBook['features'] = dfBook.apply(mergeCol, axis = 1)
+# ============================================= COUNT VECTORIZER =================================================================================
 
-# ============================================ CONTENT BASED FILTERING: 'RATING' (MULTIPLEFEATURES) ==========================================================================================
 from sklearn.feature_extraction.text import CountVectorizer
-model = CountVectorizer(
-    tokenizer= lambda i: i.split(' '),
-    analyzer= 'word'
-)
+model = CountVectorizer(tokenizer=lambda i: i.split(' '))
+matrixfeatures = model.fit_transform(dfBooks['features'])
 
-matrixfeatures = model.fit_transform(dfBook['features'])
 features = model.get_feature_names()
-eventfeature = matrixfeatures.toarray()
-jmlfeature = len(features)
+jmlfeatures = len(features)
 
-# # ===================================================== COSINUS SIMILARITY ==========================================================================================
+# ============================================= COSINE SIMILARITY =================================================================================
 
 from sklearn.metrics.pairwise import cosine_similarity
+skor = cosine_similarity(matrixfeatures)
 
-score = cosine_similarity(matrixfeatures)
+# NOTE : ONLY INPUTTING BOOK RATING WITH 5 STARS REVIEW
+andi1 = dfBooks[dfBooks['original_title']=='The Hunger Games']['book_id'].tolist()[0]-1 
+andi2 = dfBooks[dfBooks['original_title']=='Catching Fire']['book_id'].tolist()[0]-1 
+andisuka = [andi1,andi2]
 
-# # ===================================================== TEST MODEL ==========================================================================================
+budi1 = dfBooks[dfBooks['original_title']=='Harry Potter and the Philosopher\'s Stone']['book_id'].tolist()[0]-1 
+budi2 = dfBooks[dfBooks['original_title']=='Harry Potter and the Chamber of Secrets']['book_id'].tolist()[0]-1 
+budi3 = dfBooks[dfBooks['original_title']=='Harry Potter and the Prisoner of Azkaban']['book_id'].tolist()[0]-1 
+budisuka = [budi1,budi2,budi3]
 
-# # ======================================================== ANDI
+ciko1 = dfBooks[dfBooks['original_title']=='Robots and Empire']['book_id'].tolist()[0]-1 
+cikosuka = [ciko1]
 
-# NOTE: HANYA MENGINPUT RATING SALAH SATU BUKU RATING 5 STAR
+dedi1 = dfBooks[dfBooks['original_title']=='A History of God: The 4,000-Year Quest of Judaism, Christianity, and Islam']['book_id'].tolist()[0]-1 
+dedisuka = [dedi1]
 
+ello1 = dfBooks[dfBooks['original_title']=='The Story of Doctor Dolittle']['book_id'].tolist()[0]-1 
+ello2 = dfBooks[dfBooks['title']=='Bridget Jones\'s Diary (Bridget Jones, #1)']['book_id'].tolist()[0]-1 
+ellosuka = [ello1,ello2]
 
-sukabuku = 'The Hunger Games'
-indexsuka = dfBook[dfBook['original_title'] == sukabuku].index.values[0]
+skorandi1 = list(enumerate(skor[andi1]))
+skorandi2 = list(enumerate(skor[andi2]))
 
-allBook = list(enumerate(score[indexsuka]))
+skorbudi1 = list(enumerate(skor[budi1]))
+skorbudi2 = list(enumerate(skor[budi2]))
+skorbudi3 = list(enumerate(skor[budi3]))
 
-bukusama = sorted(
-    allBook,
-    key = lambda x: x[1],
-    reverse = True
-)
+skorciko1 = list(enumerate(skor[ciko1]))
 
-bukusama60up = []
-for x in bukusama:
-    if x[1] > 0.6:
-        bukusama60up.append(x)
+skordedi1 = list(enumerate(skor[dedi1]))
 
-import random
-rek = random.choices(bukusama60up, k=5)
+skorello1 = list(enumerate(skor[ello1]))
+skorello2 = list(enumerate(skor[ello2]))
 
-print('Buku bagus untuk Andi: ')
-for y in rek:
-    rekbuku = dfBook.iloc[y[0]].values
-    print('-', rekbuku[1])
+listskorandi = []
+for i in skorandi1:
+    listskorandi.append((i[0],(skorandi1[i[0]][1]+skorandi2[i[0]][1])/2))
+listskorbudi = []
+for i in skorandi1:
+    listskorbudi.append((i[0],(skorbudi1[i[0]][1]+skorbudi2[i[0]][1]+skorbudi3[i[0]][1])/3))
+listskorello = []
+for i in skorandi1:
+    listskorello.append((i[0],(skorello1[i[0]][1]+skorello2[i[0]][1])/2))
 
-print('=========================================================================')
+sortandi = sorted(listskorandi, key=lambda j:j[1], reverse=True)
+sortbudi = sorted(listskorbudi, key = lambda j:j[1], reverse = True)
+sortciko = sorted(skorciko1, key = lambda j:j[1], reverse = True)
+sortdedi = sorted(skordedi1, key = lambda j:j[1], reverse = True)
+sortello = sorted(listskorello, key = lambda j:j[1], reverse = True)
 
-# ======================================================== BUDI
+# ============================================= TOP 5 RECOMMENDATION =================================================================================
 
-# NOTE: HANYA MENGINPUT RATING SALAH SATU BUKU RATING 5 STAR
+similarandi = []
+for i in sortandi:
+    if i[1]>0:
+        similarandi.append(i)
+similarbudi = []
+for i in sortbudi:
+    if i[1]>0:
+        similarbudi.append(i)
+similarciko = []
+for i in sortciko:
+    if i[1]>0:
+        similarciko.append(i)
+similardedi = []
+for i in sortdedi:
+    if i[1]>0:
+        similardedi.append(i)
+similarello = []
+for i in sortello:
+    if i[1]>0:
+        similarello.append(i)
 
-sukabuku1 = "Harry Potter and the Philosopher's Stone"
-indexsuka1 = dfBook[dfBook['original_title'] == sukabuku1].index.values[0]
+print('Buku bagus untuk Andi:')
+for i in range(0,5):
+    if similarandi[i][0] not in andisuka:
+        print('-',dfBooks['original_title'].iloc[similarandi[i][0]])
+    else:
+        i+=5
+        print('-',dfBooks['original_title'].iloc[similarandi[i][0]])
 
-allBook1 = list(enumerate(score[indexsuka1]))
+print('============================================================================')
+print('Buku bagus untuk Budi:')
+for i in range(0,5):
+    if similarbudi[i][0] not in budisuka:
+        print('-',dfBooks['original_title'].iloc[similarbudi[i][0]])
+    else:
+        i+=5
+        print('-',dfBooks['original_title'].iloc[similarbudi[i][0]])
 
-bukusama1 = sorted(
-    allBook1,
-    key = lambda x: x[1],
-    reverse = True
-)
+print('============================================================================')
+print('Buku bagus untuk Ciko:')
+for i in range(0,5):
+    if similarciko[i][0] not in cikosuka:
+        print('-',dfBooks['original_title'].iloc[similarciko[i][0]])
+    else:
+        i+=5
+        print('-',dfBooks['original_title'].iloc[similarciko[i][0]])
 
-bukusama60up1 = []
-for x in bukusama1:
-    if x[1] > 0.6:
-        bukusama60up1.append(x)
+print('============================================================================')
+print('Buku bagus untuk Dedi:')
+for i in range(0,5):
+    if similardedi[i][0] not in dedisuka:
+        print('-',dfBooks['original_title'].iloc[similardedi[i][0]])
+    else:
+        i+=5
+        print('-',dfBooks['original_title'].iloc[similardedi[i][0]])
 
-import random
-rek1 = random.choices(bukusama60up1, k=5)
-
-print('Buku bagus untuk Budi: ')
-for y in rek1:
-    rekbuku1 = dfBook.iloc[y[0]].values
-    print('-', rekbuku1[1])
-
-print('=========================================================================')
-
-# ======================================================== CIKO
-
-# NOTE: HANYA MENGINPUT RATING SALAH SATU BUKU RATING 5 STAR
-
-sukabuku2 = "Robots and Empire"
-indexsuka2 = dfBook[dfBook['original_title'] == sukabuku2].index.values[0]
-
-allBook2 = list(enumerate(score[indexsuka2]))
-
-bukusama2 = sorted(
-    allBook2,
-    key = lambda x: x[1],
-    reverse = True
-)
-
-bukusama60up2 = []
-for x in bukusama2:
-    if x[1] > 0.6:
-        bukusama60up2.append(x)
-
-import random
-rek2 = random.choices(bukusama60up2, k=5)
-
-print('Buku bagus untuk Ciko: ')
-for y in rek2:
-    rekbuku2 = dfBook.iloc[y[0]].values
-    print('-', rekbuku2[1])
-
-print('=========================================================================')
-
-# ======================================================== DEDI
-
-# NOTE: HANYA MENGINPUT RATING SALAH SATU BUKU RATING 5 STAR
-
-sukabuku3 = "A History of God: The 4,000-Year Quest of Judaism, Christianity, and Islam"
-indexsuka3 = dfBook[dfBook['original_title'] == sukabuku3].index.values[0]
-
-allBook3 = list(enumerate(score[indexsuka3]))
-
-bukusama3 = sorted(
-    allBook3,
-    key = lambda x: x[1],
-    reverse = True
-)
-
-bukusama60up3 = []
-for x in bukusama3:
-    if x[1] > 0.6:
-        bukusama60up3.append(x)
-
-import random
-rek3 = random.choices(bukusama60up3, k=5)
-
-print('Buku bagus untuk Ciko: ')
-for y in rek3:
-    rekbuku3 = dfBook.iloc[y[0]].values
-    print('-', rekbuku3[1])
-
-print('=========================================================================')
-
-# ======================================================== ELLO
-
-# NOTE: HANYA MENGINPUT RATING SALAH SATU BUKU RATING 4 STAR
-
-sukabuku4 = "Doctor Sleep"
-indexsuka4 = dfBook[dfBook['original_title'] == sukabuku4].index.values[0]
-
-allBook4 = list(enumerate(score[indexsuka4]))
-
-bukusama4 = sorted(
-    allBook4,
-    key = lambda x: x[1],
-    reverse = True
-)
-
-bukusama60up4 = []
-for x in bukusama4:
-    if x[1] > 0.6:
-        bukusama60up4.append(x)
-
-import random
-rek4 = random.choices(bukusama60up4, k=5)
-
-print('Buku bagus untuk Ello: ')
-for y in rek4:
-    rekbuku4 = dfBook.iloc[y[0]].values
-    print('-', rekbuku4[1])
-
-print('=========================================================================')
-
+print('============================================================================')
+print('Buku bagus untuk Ello:')
+for i in range(0,5):
+    if similarello[i][0] not in ellosuka:
+        if str(dfBooks['original_title'].iloc[similarello[i][0]])=='nan':
+            print('-',dfBooks['title'].iloc[similarello[i][0]])
+        else:
+            print('-',dfBooks['original_title'].iloc[similarello[i][0]])  
+    else:
+        i+=5
+        if str(dfBooks['original_title'].iloc[similarello[i][0]])=='nan':
+            print('-',dfBooks['title'].iloc[similarello[i][0]])
+        else:
+            print('-',dfBooks['original_title'].iloc[similarello[i][0]]) 
